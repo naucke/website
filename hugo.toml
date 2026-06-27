@@ -1,0 +1,28 @@
+theme = "hugo-simple"
+languageCode = "en"
+title = "Jakob Naucke"
+copyright = "© 2025 Jakob Naucke"
+
+enableRobotsTXT = true
+
+[markup.highlight]
+lineNos = true
+lineNumbersInTable = false
+noClasses = true
+style = "catppuccin-mocha"
+
+[params]
+favicon = ""
+hideMadeWithLine = true
+hideRSSLink = true
+
+[params.author]
+name = "Jakob Naucke"
+
+[[menu.main]]
+name = "Home"
+pageRef = "/"
+weight = 10
+[[menu.main]]
+name = "Blog"
+pageRef = "/blog"

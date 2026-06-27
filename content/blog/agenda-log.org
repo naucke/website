@@ -1,0 +1,164 @@
+#+TITLE: Orgzly-compatible "What Did I Do Today" with org-agenda
+#+DATE: 2025-02-06
+
+Do you ever get the feeling that you achieved nothing today, but when you take a closer look, you actually did a number of things?
+Writing down what you achieved on a daily basis can help you stay motivated, even if it isn't crossing an item off of a to-do list, but writing it down after the fact.
+In this post, I will show how I have integrated such a log in my workflow featuring [[https://orgzlyrevived.com][Orgzly for Android]] and org-agenda in [[https://orgmode.org][Org Mode]].
+
+This guide covers both repeating and close-once items.
+
+** Setting up Orgzly
+
+I use Orgzly with WebDAV via Nextcloud.
+To have logging of repeated items, enable ~Notes & Notebooks > Note > Log to drawer on time shift~.
+~Set property on time shift~ is not necessary for what this setup uses, but ensures consistency with Org's behaviour of setting the ~LAST_REPEAT~ property which cannot be modified beyond simply not logging as far as I can tell.
+
+Marking a close-once item as done will turn
+
+#+begin_src org
+* TODO Apply for postal voting
+#+end_src
+
+into
+
+#+begin_src org
+* DONE Apply for postal voting
+CLOSED: [2025-02-01 Sat 13:41]
+#+end_src
+
+Marking a repeating item as done will turn
+
+#+begin_src org
+* TODO Vacuuming
+SCHEDULED: <2025-02-01 Sat .+1w>
+:PROPERTIES:
+:LAST_REPEAT: [2025-01-25 Sat 14:35]
+:END:
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2025-01-25 Sat 14:35]
+:END:
+#+end_src
+
+into 
+
+#+begin_src org
+* TODO Vacuuming
+SCHEDULED: <2025-02-08 Sat .+1w>
+:PROPERTIES:
+:LAST_REPEAT: [2025-02-01 Sat 11:28]
+:END:
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2025-02-01 Sat 11:28]
+- State "DONE"       from "TODO"       [2025-01-25 Sat 14:35]
+:END:
+#+end_src
+
+*** Orgzly unified agenda and TODO
+
+Orgzly has an agenda view, but I prefer a unified view.
+The search I use is ~(s.2d or d.4w or s.no d.no i.todo) o.c o.s o.d o.p o.b o.t~.
+
+#+begin_src c
+(s.2d or           // Scheduled in the next two days
+ d.4w or           // Deadlined in the next four weeks
+ s.no d.no i.todo) // TODO, but not scheduled or deadlined
+o.c                // Order by time closed
+o.s o.d            // Order by time scheduled and deadlined
+o.p                // Order by priority
+o.b o.t            // Order by notebook and title
+#+end_src
+
+** Quirks
+
+*** Avoiding typing unscheduled tasks every time
+
+There are things I do on a regular basis and want to see in the log, but that I do not schedule onto a date or time.
+To avoid having to type them out every time, I use a small hack:
+They are scheduled onto a date in the far future, and unlike most repeating tasks, which I schedule with ~.+~, they are scheduled with just the ~+~ repeater.
+Marking them as done, incurring a log entry, is then two taps in Orgzly or ~C-c C-t~ in Org Mode.
+
+Occasionally, I may also mark such an item as “definitely still want to do today”.
+Use a sufficiently long repeater to avoid the item from cluttering your agenda.
+
+*** Scheduled tasks too small for the log
+
+Some tasks I need a reminder for, but they are too trivial for the log.
+They are given the ~:nolog:~ tag.
+Tags have inheritance, so you can also set one for a tree.
+
+*** Archiving done tasks
+
+For a better overview, use [[https://stackoverflow.com/a/2704375][this function]] to archive done tasks.
+
+** Putting it all together
+
+#+begin_src elisp
+(setq
+ ; File wildcard. I put all TODO items in files ending in `todo`,
+ ; and limit the output as such here to avoid opening too many buffers.
+ ; The trailing wildcard is important to also match archives.
+ org-agenda-files (file-expand-wildcards "~/org/*todo.org*")
+
+ ; Log close-once
+ org-log-done 'time
+ ; Log repeating
+ org-log-into-drawer t
+
+ ; Do not show a time grid
+ org-agenda-use-time-grid nil
+
+ ; Show next three days
+ org-agenda-span 3
+ ; Always start today
+ org-agenda-start-on-weekday nil
+
+ ; Don't let daily tasks clutter your agenda. Show them once.
+ org-agenda-show-future-repeats 'next
+ 
+ ; The heart of the setup: custom agenda commands.
+ org-agenda-custom-commands
+ '(( ; Key
+     "n"
+     ; Title
+     "Agenda & TODOs"
+     ; Groups: scheduled/deadline and other TODO items
+     ((agenda) (todo))
+     ; View-specific settings
+     ( ; Do not show scheduled items in TODO section.
+       ; Useful for repeating tasks.
+       (org-agenda-todo-ignore-deadlines 'all)
+       (org-agenda-todo-ignore-scheduled 'all)
+       ; Do not show done items.
+       ; Useful for keeping an overview.
+       (org-agenda-skip-deadline-if-done t)
+       (org-agenda-skip-scheduled-if-done t)))
+     ("r" "Review" ((agenda))
+       ; Headline
+      ((org-agenda-overriding-header "Done:")
+       ; Days log reaches back.
+       ; Set to one less than org-agenda-span.
+       (org-agenda-start-day "-2d")
+       ; Show only the log
+       (org-agenda-start-with-log-mode 'only)
+       ; Log items that are closed or have a state change.
+       ; Can also use clock if you track time.
+       (org-agenda-log-mode-items '(closed state))
+       ; Exclude items marked :nolog:
+       (org-agenda-tag-filter-preset '("-nolog"))))))
+
+; The usual agenda shortcut. Press e.g. `C-c a n` for agenda.
+(global-set-key (kbd "C-c a") 'org-agenda)
+#+end_src
+
+~C-c a~ with the entries above before marking:
+
+[[/agenda-before.png]]
+
+~C-c r~ with the entries above after marking:
+
+[[/agenda-after.png]]
+
+** Future work
+
+The log can only be viewed from org-agenda on a desktop (or the [[https://f-droid.org/packages/org.gnu.emacs/][Emacs Android app]] if you insist).
+It would be nicer to view it from Orgzly too, which would require a patch to Orgzly at least for viewing logbook entries 😉

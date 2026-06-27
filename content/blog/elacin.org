@@ -1,0 +1,17 @@
+#+TITLE: Elacin hearing protection string replacement mod
+#+DATE: 2025-07-27
+
+I bought my [[https://www.elacin.com/assortment/er-acoustic/][Elacin ER]] hearing protection plugs through my orchestra because we get a volume discount.
+I really like them, but the color of the string has always been my pet peeve about them.
+"The string" is a cord with a crocodile clip that is held into both silicone plugs with a small piece of plastic.
+You can detach it from the plugs, but I also like having the feature of being able to briefly remove a plug.
+From the factory, the string is a striking blue that clashes with functionally all pieces of clothing, especially black/white concert clothes.
+
+I replaced the string with some 1.5mm black polyester cord (anything synthetic will do for this method).
+I failed to thread it through the plastic endings, which might be possible with a thinner cord.
+Instead of buying another one, I found that melting the ending of the cord into a ball with a lighter does a very reasonable job as well.
+Briefly hold the cord in the flame and press it against a fireproof, clean surface.
+
+[[/elacin.jpg]]
+
+Now I can remove and reinsert the plugs anytime while maintaining a subdued look 🍻

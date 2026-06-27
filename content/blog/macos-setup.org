@@ -1,0 +1,122 @@
+#+TITLE: Using a Mac for dev without changing your PC+Model M muscle memory
+#+DATE: 2025-07-27
+
+For a brief period, I was issued an M1 MacBook for work because alongside the dev work I had been doing, there was also an amount of Microsoft Office involved.
+However, I was unwilling to give up most of the muscle memory I had developed using Emacs on a PC with an IBM Model M keyboard.
+I also require right alt to function as third layer for the EurKEY layout.
+
+Here's how I configured everything to make Emacs and the shell feel like on a PC.
+
+** Keyboard settings
+
+*** The basic setting
+
+One basic requirement for me was keeping the pattern for CUA-style chords, i.e. Ctrl (on the PC keyboard) + C should do copy.
+The key on the Mac that (mostly) does this is Command, which is Super on an external 104-key keyboard, and nonexistent on a 101-key like the Model M.
+So *Left Control should become Command*.
+
+Then, Left and Right Alt function as Left and Right Option for EurKEY (with Left inhibited by applications that use it).
+Right Control remains Control for applications that use it (except iTerm and Emacs, which we customise as below).
+macOS has some GUI controls for changing these mappings, but hidutil is more flexible.
+I generated the configuration using [Amar Syla's hidutil generator](https://hidutil-generator.netlify.app/), and as a personal preference also swapped Escape and Caps here.
+Here's the configuration (minus swapescape) in case the site is lost, to be put into ~~/Library/LaunchAgents/com.local.KeyRemapping.plist~:
+
+#+begin_src xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.local.KeyRemapping</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/hidutil</string>
+        <string>property</string>
+        <string>--set</string>
+        <string>{"UserKeyMapping":[
+            {
+              "HIDKeyboardModifierMappingSrc": 0x7000000E0,
+              "HIDKeyboardModifierMappingDst": 0x7000000E3
+            }
+        ]}</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+</dict>
+</plist>
+#+end_src
+
+I also disabled ~Keyboard Shortcuts~ > ~Input Sources~ > ~Select the previous input source~ because I would frequently hit the chord without a need to escape from EurKEY.
+
+*** iTerm2
+
+In a shell, I still want Control + C to send SIGINT, so in ~Keys~ > ~Remap Modifiers~, I set Left Command to Left Control and Right Control to Left Command for when command becomes necessary.
+Copying and pasting I want to do by Control + Shift + C/V, so these are set in ~Keys~ > ~Key Bindings~, being the actions ~Copy Selection or Send ^C~ and ~Paste or Send ^V~, respectively.
+
+*** Emacs
+
+Finally, tell Emacs to interpret Command as Control.
+I also set Right Control as Super for when some rare chord requires it, and set Right Option to nil to maintain EurKEY functionality.
+
+#+begin_src lisp
+(setq
+ mac-command-modifier 'control
+ mac-right-control-modifier 'super
+ mac-right-option-modifier nil)
+#+end_src
+
+** Emacs launch
+
+I installed emacs-plus via Homebrew because it seemed like an up-to-date, Mac-aware distribution, but have not tested other distributions except XCode's, which I cannot recommend.
+I want to use Emacs "as if" in a shell environment which means that some ~eval~s are necessary; I'm including Brew as reference, but this can also come in handy for pyenv or any PATH expansions.
+I achieved this by creating a "Run Shell Script" task in Automator:
+
+#+begin_src sh
+eval "$(/opt/homebrew/bin/brew shellenv)"
+# other steps...
+
+# fork to avoid spinning cogwheel
+emacs &> /dev/null &
+#+end_src
+
+You can also give the task an icon and drag it into dock.
+What's imperfect about this approach is that it opens a new app icon and is not reachable via Spotlight.
+Suggestions welcome 🙂
+
+** Extra pet peeves
+
+*** XDG directories
+
+I like a clean ~~~, and many applications will respect ~XDG_CONFIG_HOME~ et al. even though these variables are not standardised on macOS.
+Set system-wide environment variables like this in ~~/Library/LaunchAgents/com.local.Env.plist~.
+Spelling out the home directory (~/Users/jakob~ in my case) is necessary AFAICT.
+
+#+begin_src xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.local.Env</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>sh</string>
+    <string>-c</string>
+    <string>
+      launchctl setenv XDG_CACHE_HOME /Users/jakob/.cache && \
+      launchctl setenv XDG_CONFIG_HOME /Users/jakob/.config
+    </string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+</dict>
+</plist>
+#+end_src
+
+From this point on, you can use [[https://github.com/b3nj5m1n/xdg-ninja][xdg-ninja]] for a cleaner home directory.
+Append to these ~launchctl~ commands to ensure a system-wide (i.e. including Emacs) setting.
+
+*** Blurry color-on-color rendering on 10bit display
+
+I don't know enough about displays and their connections to explain the "why" or find a better solution, but color-on-color rendering was very jagged.
+Setting the connection to 8bit with BetterDisplay fixed this.
